@@ -29,4 +29,4 @@ def test_save_and_load():
     assert names == class_names
 
 
-test_save_and_load()
+# test_save_and_load()
