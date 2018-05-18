@@ -17,9 +17,9 @@ def _labeled(class_names):
 
 
 def main(samples_dir, test_images_dir, output_dir):
-    # face_descriptors, class_names = load_samples_descriptors(samples_dir)
+    face_descriptors, class_names = load_samples_descriptors(samples_dir)
     # save2pickle(face_descriptors, class_names, 'wg_merged.pkl')
-    face_descriptors, class_names = load_from_pickle('wg_merged.pkl')
+    # face_descriptors, class_names = load_from_pickle('wg_merged.pkl')
     print(class_names)
     labels, names = _labeled(class_names)
     classifier = SVMClassifier()

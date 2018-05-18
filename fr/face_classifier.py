@@ -1,9 +1,8 @@
 import datetime
 import pickle
 
-from sklearn import svm
-# from sklearn.multiclass import
 import numpy as np
+from sklearn import svm
 
 
 class SVMClassifier:
@@ -27,8 +26,3 @@ class SVMClassifier:
         predictions = self.classifier.predict(np.array(x))
 
         return [self.class_names[i] for i in predictions]
-
-#
-# class KNNClassifier:
-#     def __init__(self):
-#         self.classifier =
