@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import sys
+
 import numpy.linalg as la
 
 
@@ -17,7 +19,7 @@ def similar_faces(face_descriptors, target_face_descriptor, threshold=0.6):
 
 def closest_one(face_descriptors, target_face_descriptor):
     min_idx = 0
-    min_distance = 999999999
+    min_distance = sys.maxsize
     for i, fd in enumerate(face_descriptors):
         distance = compare(fd, target_face_descriptor)
         if distance < min_distance:
