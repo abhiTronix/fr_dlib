@@ -52,7 +52,6 @@ def main(samples_dir, output_dir, image_size=160, margin=32):
                 y1 = max(y1 - margin, 0)
                 x2 = min(x2 + margin, width)
                 y2 = min(y2 + margin, height)
-                print(x1, y1, x2, y2)
 
                 roi = im[y1:y2, x1:x2, :]
 

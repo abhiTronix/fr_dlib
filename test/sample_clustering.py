@@ -30,17 +30,16 @@ def main(samples_dir, test_dir, output_dir):
     image_files = images_in_dir(test_dir)
 
     for im_f in image_files:
-        f_name = filename(im_f)
         im = cv2.imread(im_f)
         faces = detect_faces(im)
         start = time.time()
         for face in faces:
             descriptor = compute_face_descriptor(im, face)
             idx, distance = closest_one(face_descriptors, descriptor)
-            if distance > 0.3:
-                label = class_names[idx]
-            else:
+            if distance > 0.4:
                 label = 'unknown'
+            else:
+                label = class_names[idx]
             subdir = _subdir(output_dir, label)
 
             images_count = len(glob.glob('{}/*.jpg'.format(subdir)))
