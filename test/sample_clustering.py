@@ -4,9 +4,9 @@ import sys
 import time
 
 import cv2
-from img_utils.files import images_in_dir, filename
+from img_utils.files import images_in_dir
 
-from fr import detect_faces, compute_face_descriptor, closest_one, load_from_pickle, load_samples_descriptors, \
+from fr import detect_faces, compute_face_descriptor, closest_one, load_samples_descriptors, \
     save2pickle
 
 BASE_DIR = os.path.dirname(__file__)
@@ -27,6 +27,7 @@ def main(samples_dir, test_dir, output_dir):
     print("len face_descriptors: {}".format(len(face_descriptors)))
     print("len class_names: {}".format(len(class_names)))
     print("class_names: {}".format(class_names))
+    print("total class: {}".format(len(set(class_names))))
     image_files = images_in_dir(test_dir)
 
     for im_f in image_files:

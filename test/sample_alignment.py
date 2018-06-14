@@ -7,6 +7,7 @@ import cv2
 from img_utils.files import images_in_dir
 
 from fr import detect_faces
+from fr.samples_reader import read_from_hierarchy
 from fr.utils import to_rectangle
 
 BASE_DIR = os.path.dirname(__file__)
@@ -17,15 +18,6 @@ def _subdir(output_dir, label):
     if not os.path.exists(dir_name):
         os.mkdir(dir_name)
     return dir_name
-
-
-def read_from_hierarchy(images_dir):
-    sub_dirs = [x for x in os.walk(images_dir)]
-    hierarchy = {}
-    for d in sub_dirs[0][1]:
-        hierarchy[d] = os.path.join(images_dir, d)
-    print(hierarchy)
-    return hierarchy
 
 
 def main(samples_dir, output_dir, image_size=160, margin=32):
