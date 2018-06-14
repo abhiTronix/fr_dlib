@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
+
 import dlib
 import numpy as np
 
@@ -19,7 +22,24 @@ def detect_faces(im):
     return utils.to_dlib_rectangles(faces)
 
 
-def compute_face_descriptor(im, face):
+def compute_face_descriptor(im, face, num_jitters=5):
     shape = face_shape_predictor(im, face)
-    descriptor = face_descriptor.compute_face_descriptor(im, shape, 100)
+
+    descriptor = face_descriptor.compute_face_descriptor(im, shape, num_jitters)
     return np.array(descriptor)
+
+
+executor = None
+
+
+def compute_face_descriptor_multi_thread(im, face, num_jitters=5, threads=5):
+    global executor
+    if executor is None:
+        executor = ProcessPoolExecutor(max_workers=multiprocessing.cpu_count())
+    futures = []
+    for i in range(threads):
+        future = executor.submit(compute_face_descriptor, im, face, num_jitters)
+        futures.append(future)
+
+    results = [future.result() for future in futures]
+    return results

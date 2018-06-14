@@ -10,6 +10,7 @@ class SVMClassifier:
         self.probability = probability
         if not probability:
             self.classifier = svm.LinearSVC(multi_class='ovr', random_state=0)
+
         else:
             self.classifier = svm.SVC(kernel='linear', probability=True, random_state=0)
         self.class_names = []

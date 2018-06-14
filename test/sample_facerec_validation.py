@@ -2,12 +2,15 @@ import glob
 import os
 import sys
 import time
+from collections import Collection, Counter
 
 import cv2
 from img_utils.files import images_in_dir
 
-from fr import detect_faces, compute_face_descriptor, load_samples_descriptors, read_from_hierarchy
+from fr import compute_face_descriptor, read_from_hierarchy, closest_one, load_samples_descriptors, \
+    compute_face_descriptor_multi_thread
 from fr.face_classifier import SVMClassifier
+from fr.utils import rect_2_dlib_rectangles
 
 BASE_DIR = os.path.dirname(__file__)
 
@@ -26,62 +29,100 @@ def _labeled(class_names):
     return [name_dict[n] for n in class_names], names
 
 
+def _save_result(im, label, output_dir):
+    subdir = _subdir(output_dir, label)
+
+    images_count = len(glob.glob('{}/*.jpg'.format(subdir)))
+
+    f_name = '{}_{}.jpg'.format(label, '{0:04d}'.format(images_count))
+
+    output_path = os.path.join(subdir, f_name)
+    cv2.imwrite(output_path, im)
+
+
+def _evaluate_with_distance(im, faces, face_descriptors, class_names, label_y, output_dir):
+    print('Validate data with label of {}'.format(label_y))
+    accurate = 0
+    time_total = 0
+    for face in faces:
+        start = time.time()
+        descriptor = compute_face_descriptor(im, face)
+        print('Descriptor computing, time spent: {} '.format(time.time() - start))
+        idx, distance = closest_one(face_descriptors, descriptor)
+        time_spent = time.time() - start
+        time_total += time_spent
+        print('Distance, time spent: {} '.format(time_spent))
+        if distance > 0.4:
+            label = 'unknown'
+        else:
+            label = class_names[idx]
+        if label == label_y:
+            accurate += 1
+        _save_result(im, label, output_dir)
+    return accurate, time_total
+
+
+def _evaluate_with_classifier(im, faces, classifier, label_y, output_dir):
+    print('Validate data with label of {}'.format(label_y))
+    accurate = 0
+    time_total = 0
+    for face in faces:
+        start = time.time()
+        # descriptor = compute_face_descriptor(im, face, upsample=25)
+        # descriptors = [descriptor]
+        descriptors = compute_face_descriptor_multi_thread(im, face, num_jitters=10, threads=5)
+        results = classifier.predict(descriptors)
+        time_spent = time.time() - start
+        time_total += time_spent
+        print('Evaluation, time spent: {} '.format(time_spent))
+        # label = results[0]
+        label = Counter(results).most_common(1)[0][0]
+        if label == label_y:
+            accurate += 1
+        _save_result(im, label, output_dir)
+    return accurate, time_total
+
+
 def main(samples_dir, validate_data_dir, output_dir):
-    face_descriptors, class_names = load_samples_descriptors(samples_dir)
-    print("len face_descriptors: {}".format(len(face_descriptors)))
-    print("len class_names: {}".format(len(class_names)))
-    print("class_names: {}".format(class_names))
-    print("class_names: {}".format(class_names))
-    print("total class: {}".format(len(set(class_names))))
-
-    labels, names = _labeled(class_names)
-    classifier = SVMClassifier(probability=True)
-
-    print([names[i] for i in labels])
-
-    classifier.train(face_descriptors, labels, names)
+    classifier_file = "classifier_wgers_160_2018-06-14.pkl"
+    classifier = SVMClassifier(probability=False)
+    if classifier_file is None:
+        face_descriptors, class_names = load_samples_descriptors(samples_dir)
+        print("len face_descriptors: {}".format(len(face_descriptors)))
+        print("len class_names: {}".format(len(class_names)))
+        print("class_names: {}".format(class_names))
+        print("class_names: {}".format(class_names))
+        print("total class: {}".format(len(set(class_names))))
+        labels, names = _labeled(class_names)
+        print([names[i] for i in labels])
+        classifier.train(face_descriptors, labels, names)
+    else:
+        classifier.load(classifier_file)
 
     hierarchy = read_from_hierarchy(validate_data_dir)
 
     total = 0
     accurate = 0
+    time_spent = 0
     for k in hierarchy.keys():
         image_files = images_in_dir(hierarchy[k])
+        total += len(image_files)
         for im_f in image_files:
-            total += 1
             im = cv2.imread(im_f)
-            faces = detect_faces(im)
-            start = time.time()
-            for face in faces:
-                descriptor = compute_face_descriptor(im, face)
-                results = classifier.predict([descriptor])
-                # idx, distance = closest_one(face_descriptors, descriptor)
-                # if distance > 0.4:
-                #     label = 'unknown'
-                # else:
-                #     label = class_names[idx]
-                label, probability = results[0]
-                if probability < 0.5:
-                    label = 'unknown'
-                if label == k:
-                    accurate += 1
 
-                subdir = _subdir(output_dir, label)
+            # faces = detect_faces(im)
+            height, width = im.shape[:2]
+            faces = rect_2_dlib_rectangles((0, 0), (width, height))
 
-                images_count = len(glob.glob('{}/*.jpg'.format(subdir)))
-
-                f_name = '{}_{}.jpg'.format(label, '{0:04d}'.format(images_count))
-
-                # print('{}: {}, of distance :{} '.format(im_f, f_name, distance))
-
-                output_path = os.path.join(subdir, f_name)
-                cv2.imwrite(output_path, im)
-            print('{} done, time spent: {} '.format(im_f, time.time() - start))
-
-        print("Accuracy is: {} ".format(accurate / total))
-
+            a, t = _evaluate_with_classifier(im, faces, classifier, k, output_dir)
+            accurate += a
+            time_spent += t
+        print("-------------------------------------Accuracy is: {} ".format(accurate / total))
+    print('==================================================================')
     print('Accurate is {}, total: {}'.format(accurate, total))
-    print("Total Accuracy is: {} ".format(accurate / total))
+    print('Total time spent is: {}'.format(time_spent))
+    print("Average time spent is: {}".format(time_spent / total))
+    print("Average Accuracy is: {} ".format(accurate / total))
 
 
 if __name__ == '__main__':
